@@ -25,7 +25,7 @@ module "eks" {
   source = "../../modules/eks"
 
   cluster_name       = "example"
-  kubernetes_version = "1.30"
+  kubernetes_version = "1.32"
   private_subnet_ids = module.vpc.private_subnet_ids
   public_subnet_ids  = module.vpc.public_subnet_ids
 
