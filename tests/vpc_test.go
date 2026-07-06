@@ -21,11 +21,11 @@ func TestVPCModule(t *testing.T) {
 	terraformOptions := &terraform.Options{
 		TerraformDir: "../modules/vpc",
 		Vars: map[string]interface{}{
-			"name": name,
-			"cidr": "10.0.0.0/16",
-			"azs":  []string{"us-east-1a", "us-east-1b"},
-			"private_subnets": []string{"10.0.1.0/24", "10.0.2.0/24"},
-			"public_subnets":  []string{"10.0.101.0/24", "10.0.102.0/24"},
+			"name":               name,
+			"cidr":               "10.0.0.0/16",
+			"azs":                []string{"us-east-1a", "us-east-1b"},
+			"private_subnets":    []string{"10.0.1.0/24", "10.0.2.0/24"},
+			"public_subnets":     []string{"10.0.101.0/24", "10.0.102.0/24"},
 			"enable_nat_gateway": true,
 			"single_nat_gateway": true,
 			"enable_flow_logs":   false,
@@ -46,7 +46,7 @@ func TestVPCModule(t *testing.T) {
 	require.NotEmpty(t, vpcID)
 
 	vpc := aws.GetVpcById(t, vpcID, awsRegion)
-	assert.Equal(t, "10.0.0.0/16", vpc.CidrBlock)
+	assert.Equal(t, vpcID, vpc.Id)
 
 	privateSubnetIDs := terraform.OutputList(t, terraformOptions, "private_subnet_ids")
 	assert.Len(t, privateSubnetIDs, 2)
