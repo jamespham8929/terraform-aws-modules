@@ -65,8 +65,10 @@ Tests use [Terratest](https://terratest.gruntwork.io/) and deploy real resources
 ```bash
 cd tests
 go test -v -run TestVPCModule -timeout 30m
-go test -v -run TestEKSModule -timeout 60m
 ```
+
+Only the VPC module has a Terratest today. Coverage for the EKS, RDS, and ALB
+modules is planned.
 
 Set `AWS_PROFILE` or standard AWS environment variables before running. Tests clean up all resources on completion or failure.
 
