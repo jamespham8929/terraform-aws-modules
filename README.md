@@ -66,11 +66,12 @@ Tests use [Terratest](https://terratest.gruntwork.io/) and deploy real resources
 cd tests
 go test -v -run TestVPCModule -timeout 30m
 go test -v -run TestEKSModule -timeout 60m
+go test -v -run TestRDSModule -timeout 45m
+go test -v -run TestALBModule -timeout 30m
 ```
 
-The EKS test stands up a VPC first and tears it down last, so a single run
-provisions and destroys the full cluster. Coverage for the RDS and ALB modules
-is planned.
+The EKS, RDS, and ALB tests each stand up a VPC first and tear it down last, so a
+single run provisions and destroys the full set of resources it needs.
 
 Set `AWS_PROFILE` or standard AWS environment variables before running. Tests clean up all resources on completion or failure.
 
