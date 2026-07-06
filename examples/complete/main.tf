@@ -52,9 +52,9 @@ module "eks" {
   }
 
   cluster_addons = {
-    coredns = { version = "v1.11.1-eksbuild.4" }
-    kube-proxy = { version = "v1.30.0-eksbuild.3" }
-    vpc-cni = { version = "v1.18.1-eksbuild.1" }
+    coredns            = { version = "v1.11.1-eksbuild.4" }
+    kube-proxy         = { version = "v1.30.0-eksbuild.3" }
+    vpc-cni            = { version = "v1.18.1-eksbuild.1" }
     aws-ebs-csi-driver = { version = "v1.31.0-eksbuild.1" }
   }
 
@@ -67,19 +67,19 @@ module "eks" {
 module "rds" {
   source = "../../modules/rds"
 
-  identifier    = "example-postgres"
-  engine        = "postgres"
+  identifier     = "example-postgres"
+  engine         = "postgres"
   engine_version = "15.4"
   instance_class = "db.t3.medium"
-  db_name       = "appdb"
+  db_name        = "appdb"
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnet_ids
 
-  allowed_cidr_blocks    = [module.vpc.vpc_cidr_block]
-  multi_az               = true
-  deletion_protection    = false
-  skip_final_snapshot    = true
+  allowed_cidr_blocks = [module.vpc.vpc_cidr_block]
+  multi_az            = true
+  deletion_protection = false
+  skip_final_snapshot = true
 
   tags = {
     Environment = "example"
@@ -109,8 +109,3 @@ module "alb" {
     ManagedBy   = "terraform"
   }
 }
-
-output "vpc_id"           { value = module.vpc.vpc_id }
-output "eks_endpoint"     { value = module.eks.cluster_endpoint }
-output "rds_endpoint"     { value = module.rds.db_instance_endpoint }
-output "alb_dns_name"     { value = module.alb.alb_dns_name }
