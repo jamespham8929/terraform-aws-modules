@@ -1,0 +1,17 @@
+formatter: "markdown table"
+
+sections:
+  show:
+    - inputs
+    - outputs
+
+sort:
+  enabled: true
+  by: name
+
+settings:
+  anchor: false
+
+output:
+  file: README.md
+  mode: inject

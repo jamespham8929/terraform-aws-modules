@@ -48,3 +48,28 @@ jobs:
         run: tflint --init
       - name: Run tflint
         run: tflint --recursive
+
+  docs:
+    name: terraform-docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install terraform-docs
+        env:
+          TFDOCS_VERSION: v0.24.0
+        run: |
+          curl -sSLo terraform-docs.tar.gz \
+            "https://github.com/terraform-docs/terraform-docs/releases/download/${TFDOCS_VERSION}/terraform-docs-${TFDOCS_VERSION}-linux-amd64.tar.gz"
+          tar -xzf terraform-docs.tar.gz terraform-docs
+          sudo install terraform-docs /usr/local/bin/
+      - name: Regenerate module docs
+        run: |
+          for module in modules/*/; do
+            terraform-docs --config .terraform-docs.yml "$module"
+          done
+      - name: Fail if docs are out of date
+        run: |
+          if ! git diff --exit-code -- 'modules/*/README.md'; then
+            echo "::error::module docs are stale. Run terraform-docs and commit the result." >&2
+            exit 1
+          fi

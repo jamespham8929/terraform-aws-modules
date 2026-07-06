@@ -82,6 +82,19 @@ On every pull request, GitHub Actions runs:
 - `terraform fmt -check` across all modules
 - `terraform validate` per module
 - `tflint` with the AWS ruleset
+- `terraform-docs` to confirm each module's input and output tables are current
+
+Each module's `README.md` inputs and outputs tables are generated with
+[terraform-docs](https://terraform-docs.io). Regenerate them after changing a
+module's variables or outputs:
+
+```bash
+for module in modules/*/; do
+  terraform-docs --config .terraform-docs.yml "$module"
+done
+```
+
+The CI docs job fails if the committed tables drift from the module source.
 
 See [.github/workflows/validate.yml](./.github/workflows/validate.yml).
 
