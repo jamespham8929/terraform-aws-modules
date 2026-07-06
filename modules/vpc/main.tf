@@ -34,7 +34,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = merge(var.tags, {
-    Name                   = "${var.name}-public-${count.index + 1}"
+    Name                     = "${var.name}-public-${count.index + 1}"
     "kubernetes.io/role/elb" = "1"
   })
 }
@@ -47,7 +47,7 @@ resource "aws_subnet" "private" {
   availability_zone = var.azs[count.index % local.azs_count]
 
   tags = merge(var.tags, {
-    Name                            = "${var.name}-private-${count.index + 1}"
+    Name                              = "${var.name}-private-${count.index + 1}"
     "kubernetes.io/role/internal-elb" = "1"
   })
 }
@@ -132,9 +132,9 @@ resource "aws_iam_role" "flow_log" {
 }
 
 resource "aws_iam_role_policy" "flow_log" {
-  count  = var.enable_flow_logs ? 1 : 0
-  name   = "${var.name}-vpc-flow-log"
-  role   = aws_iam_role.flow_log[0].id
+  count = var.enable_flow_logs ? 1 : 0
+  name  = "${var.name}-vpc-flow-log"
+  role  = aws_iam_role.flow_log[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{

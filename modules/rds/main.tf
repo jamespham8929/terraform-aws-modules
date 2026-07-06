@@ -80,9 +80,9 @@ resource "aws_db_instance" "this" {
   db_subnet_group_name   = aws_db_subnet_group.this.name
   vpc_security_group_ids = [aws_security_group.this.id]
 
-  multi_az               = var.multi_az
-  publicly_accessible    = false
-  deletion_protection    = var.deletion_protection
+  multi_az            = var.multi_az
+  publicly_accessible = false
+  deletion_protection = var.deletion_protection
 
   backup_retention_period = var.backup_retention_period
   backup_window           = var.backup_window
