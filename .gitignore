@@ -16,3 +16,5 @@ crash.*.log
 
 # Go module cache
 vendor/
+
+.DS_Store
