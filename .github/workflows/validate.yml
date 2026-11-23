@@ -6,13 +6,16 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   fmt:
     name: Format check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "~1.5"
       - name: terraform fmt
@@ -25,8 +28,8 @@ jobs:
       matrix:
         module: [vpc, eks, rds, alb]
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "~1.5"
       - name: terraform init
@@ -40,20 +43,26 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: terraform-linters/setup-tflint@v4
+      - uses: actions/checkout@v7
+      - uses: terraform-linters/setup-tflint@v6
         with:
-          tflint_version: latest
+          # Pinned so a new tflint release cannot turn main red on its own.
+          tflint_version: v0.66.0
       - name: Init tflint
-        run: tflint --init
+        env:
+          # Plugin downloads hit the GitHub API, which rate-limits anonymous calls.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: tflint --init --config "$GITHUB_WORKSPACE/.tflint.hcl"
       - name: Run tflint
-        run: tflint --recursive
+        # --recursive only reads the root config when it is given as an
+        # absolute path. Otherwise each directory runs without the AWS ruleset.
+        run: tflint --recursive --config "$GITHUB_WORKSPACE/.tflint.hcl"
 
   docs:
     name: terraform-docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install terraform-docs
         env:
           TFDOCS_VERSION: v0.24.0
