@@ -6,16 +6,16 @@ Production-ready Terraform modules for common AWS infrastructure patterns. Each 
 
 | Module | Description |
 |--------|-------------|
-| [vpc](./modules/vpc) | Multi-AZ VPC with public/private subnets, NAT gateways, and VPC flow logs |
-| [eks](./modules/eks) | EKS cluster with managed node groups, IRSA OIDC provider, and control plane logging |
-| [rds](./modules/rds) | RDS instance with Multi-AZ standby, automated backups, and KMS encryption |
-| [alb](./modules/alb) | Application Load Balancer with HTTPS redirect, WAF association, and target group |
+| [vpc](./modules/vpc) | Multi-AZ VPC with public/private subnets, NAT gateways, VPC flow logs, and a default security group that allows nothing |
+| [eks](./modules/eks) | EKS cluster with managed node groups, IRSA OIDC provider, control plane logging, KMS encryption of secrets, and a private API endpoint by default |
+| [rds](./modules/rds) | RDS instance with Multi-AZ standby, automated backups, KMS encryption, and a master password RDS creates and rotates |
+| [alb](./modules/alb) | Application Load Balancer with HTTPS redirect, optional WAF association, and target groups |
 
 ## Requirements
 
-- Terraform >= 1.5
+- Terraform >= 1.5 (1.7 or newer to run `terraform test`)
 - AWS provider >= 5.0
-- Go >= 1.21 (tests only)
+- Go >= 1.21 (terratests only)
 
 ## Usage
 
@@ -60,7 +60,26 @@ module "eks" {
 
 ## Testing
 
-Tests use [Terratest](https://terratest.gruntwork.io/) and deploy real resources. Run against a real AWS account with appropriate permissions.
+There are two layers.
+
+Plan tests run with `terraform test` and need no AWS account. Each module has a
+`tests/plan.tftest.hcl` that runs against a mock AWS provider. They check the
+choices a module makes: how many NAT gateways a layout gets, that storage is
+encrypted, that the RDS password never passes through Terraform, that port 80
+forwards when there is no certificate. They run in seconds.
+
+```bash
+cd modules/vpc
+terraform init -backend=false
+terraform test
+```
+
+These tests found two bugs that `terraform validate` could not. A VPC with
+`enable_nat_gateway = false` and more than one private subnet failed to plan.
+And an ALB with no certificate redirected port 80 to an HTTPS listener that did
+not exist.
+
+Terratests deploy real resources. Run them against a real AWS account with appropriate permissions.
 
 ```bash
 cd tests
@@ -80,7 +99,10 @@ Set `AWS_PROFILE` or standard AWS environment variables before running. Tests cl
 On every pull request, GitHub Actions runs:
 
 - `terraform fmt -check` across all modules
-- `terraform validate` per module
+- `terraform validate` per module, on Terraform 1.5
+- `terraform test` per module, against mock providers
+- `checkov` with the AWS policy set. A finding fails the build. A deliberate
+  exception is a `checkov:skip` comment on the resource, with its reason
 - `tflint` with the AWS ruleset
 - `terraform-docs` to confirm each module's input and output tables are current
 
@@ -97,6 +119,11 @@ done
 The CI docs job fails if the committed tables drift from the module source.
 
 See [.github/workflows/validate.yml](./.github/workflows/validate.yml).
+
+## Changes
+
+See [CHANGELOG.md](./CHANGELOG.md). Version 0.2.0 changes some defaults, so read
+it before you upgrade.
 
 ## License
 

@@ -39,6 +39,42 @@ jobs:
         run: terraform validate
         working-directory: modules/${{ matrix.module }}
 
+  test:
+    name: Plan tests (${{ matrix.module }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: [vpc, eks, rds, alb]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          # mock_provider needs 1.7 or newer. The modules themselves still
+          # support 1.5, which the validate job checks.
+          terraform_version: "~1.15"
+      - name: terraform init
+        run: terraform init -backend=false
+        working-directory: modules/${{ matrix.module }}
+      - name: terraform test
+        # Mock providers stand in for AWS, so this needs no account and no
+        # credentials. The terratests in tests/ cover real applies.
+        run: terraform test
+        working-directory: modules/${{ matrix.module }}
+
+  policy:
+    name: Policy (checkov)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install checkov==3.4.7
+      - name: Check the modules against the AWS policy set
+        # A finding fails the build. A deliberate exception is a
+        # checkov:skip comment on the resource, with the reason next to it.
+        run: checkov -d modules --framework terraform --compact --quiet
+
   tflint:
     name: Lint
     runs-on: ubuntu-latest
