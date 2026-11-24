@@ -6,10 +6,6 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 5.0"
     }
-    random = {
-      source  = "hashicorp/random"
-      version = ">= 3.0"
-    }
   }
 }
 
@@ -26,45 +22,24 @@ resource "aws_security_group" "this" {
   vpc_id      = var.vpc_id
 
   ingress {
+    description = "Database clients"
     from_port   = var.port
     to_port     = var.port
     protocol    = "tcp"
     cidr_blocks = var.allowed_cidr_blocks
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  # No egress block. Terraform then removes AWS's default allow-all egress
+  # rule. The database answers its clients through connection tracking and
+  # does not need to open connections of its own.
 
   tags = merge(var.tags, { Name = "${var.identifier}-rds" })
 }
 
-resource "random_password" "master" {
-  count   = var.manage_master_password ? 1 : 0
-  length  = 32
-  special = false
-}
-
-resource "aws_secretsmanager_secret" "master" {
-  count                   = var.manage_master_password ? 1 : 0
-  name                    = "${var.identifier}/master-password"
-  recovery_window_in_days = 7
-  tags                    = var.tags
-}
-
-resource "aws_secretsmanager_secret_version" "master" {
-  count     = var.manage_master_password ? 1 : 0
-  secret_id = aws_secretsmanager_secret.master[0].id
-  secret_string = jsonencode({
-    username = var.username
-    password = random_password.master[0].result
-  })
-}
-
 resource "aws_db_instance" "this" {
+  #checkov:skip=CKV_AWS_118:Enhanced monitoring needs its own IAM role and costs extra. Performance Insights is on and covers most of the same questions.
+  #checkov:skip=CKV2_AWS_30:Query logging is engine specific and belongs in a parameter group the caller owns.
+  #checkov:skip=CKV_AWS_354:Performance Insights uses kms_key_id when it is set, and the AWS managed key otherwise.
   identifier        = var.identifier
   engine            = var.engine
   engine_version    = var.engine_version
@@ -76,7 +51,12 @@ resource "aws_db_instance" "this" {
 
   db_name  = var.db_name
   username = var.username
-  password = var.manage_master_password ? random_password.master[0].result : var.password
+
+  # RDS creates the master password, keeps it in Secrets Manager, and rotates
+  # it. Terraform never sees it, so it never lands in state.
+  manage_master_user_password   = var.manage_master_password ? true : null
+  master_user_secret_kms_key_id = var.manage_master_password ? var.kms_key_id : null
+  password                      = var.manage_master_password ? null : var.password
 
   port                   = var.port
   db_subnet_group_name   = aws_db_subnet_group.this.name
@@ -92,6 +72,7 @@ resource "aws_db_instance" "this" {
 
   performance_insights_enabled          = true
   performance_insights_retention_period = 7
+  performance_insights_kms_key_id       = var.kms_key_id
 
   enabled_cloudwatch_logs_exports = var.enabled_cloudwatch_logs_exports
 
@@ -101,4 +82,11 @@ resource "aws_db_instance" "this" {
   final_snapshot_identifier  = var.skip_final_snapshot ? null : "${var.identifier}-final"
 
   tags = var.tags
+
+  lifecycle {
+    precondition {
+      condition     = var.manage_master_password || length(var.password) >= 8
+      error_message = "Set password (8 characters or more) when manage_master_password is false."
+    }
+  }
 }

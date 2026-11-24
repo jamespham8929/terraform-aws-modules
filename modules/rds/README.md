@@ -20,7 +20,7 @@ RDS instance with Multi-AZ standby, automated backups, and KMS encryption.
 | instance\_class | RDS instance class | `string` | `"db.t3.medium"` | no |
 | kms\_key\_id | ARN of the KMS key used to encrypt storage (defaults to AWS-managed key) | `string` | `null` | no |
 | maintenance\_window | Weekly time range for maintenance (UTC) | `string` | `"Mon:04:00-Mon:05:00"` | no |
-| manage\_master\_password | Generate and store the master password in Secrets Manager | `bool` | `true` | no |
+| manage\_master\_password | Let RDS generate the master password, store it in Secrets Manager, and rotate it | `bool` | `true` | no |
 | multi\_az | Deploy a Multi-AZ standby for high availability | `bool` | `true` | no |
 | password | Master password (ignored when manage\_master\_password = true) | `string` | `""` | no |
 | port | Port the database listens on | `number` | `5432` | no |
@@ -40,5 +40,5 @@ RDS instance with Multi-AZ standby, automated backups, and KMS encryption.
 | db\_instance\_id | RDS instance identifier |
 | db\_instance\_port | Port the instance listens on |
 | db\_security\_group\_id | ID of the security group attached to the RDS instance |
-| master\_password\_secret\_arn | ARN of the Secrets Manager secret holding the master password |
+| master\_password\_secret\_arn | ARN of the RDS-managed Secrets Manager secret holding the master password |
 <!-- END_TF_DOCS -->

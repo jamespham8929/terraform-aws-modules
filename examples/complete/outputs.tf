@@ -37,7 +37,7 @@ output "rds_endpoint" {
 }
 
 output "rds_master_password_secret_arn" {
-  description = "Secrets Manager ARN holding the generated RDS master password"
+  description = "Secrets Manager ARN of the RDS-managed master password"
   value       = module.rds.master_password_secret_arn
 }
 

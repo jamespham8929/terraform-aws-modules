@@ -62,8 +62,8 @@ func TestRDSModule(t *testing.T) {
 	securityGroupID := terraform.Output(t, terraformOptions, "db_security_group_id")
 	assert.NotEmpty(t, securityGroupID)
 
-	// manage_master_password defaults to true, so a Secrets Manager secret holds
-	// the generated credentials.
+	// manage_master_password defaults to true, so RDS creates the password and
+	// keeps it in a Secrets Manager secret it rotates.
 	secretARN := terraform.Output(t, terraformOptions, "master_password_secret_arn")
 	assert.Contains(t, secretARN, "arn:aws:secretsmanager", "master password should be stored in Secrets Manager")
 }

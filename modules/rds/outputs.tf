@@ -29,6 +29,6 @@ output "db_security_group_id" {
 }
 
 output "master_password_secret_arn" {
-  description = "ARN of the Secrets Manager secret holding the master password"
-  value       = var.manage_master_password ? aws_secretsmanager_secret.master[0].arn : null
+  description = "ARN of the RDS-managed Secrets Manager secret holding the master password"
+  value       = one(aws_db_instance.this.master_user_secret[*].secret_arn)
 }

@@ -46,7 +46,7 @@ variable "password" {
 }
 
 variable "manage_master_password" {
-  description = "Generate and store the master password in Secrets Manager"
+  description = "Let RDS generate the master password, store it in Secrets Manager, and rotate it"
   type        = bool
   default     = true
 }
