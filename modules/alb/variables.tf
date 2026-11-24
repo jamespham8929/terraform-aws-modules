@@ -38,13 +38,23 @@ variable "access_logs_bucket" {
 }
 
 variable "target_groups" {
-  description = "Map of target group configurations"
+  description = "Map of target group configurations. The first key in sorted order is the default target."
   type = map(object({
     port              = number
     target_type       = string
     health_check_path = string
   }))
-  default = {}
+
+  validation {
+    condition     = length(var.target_groups) > 0
+    error_message = "Define at least one target group. The listeners forward to it."
+  }
+}
+
+variable "waf_web_acl_arn" {
+  description = "ARN of a WAFv2 web ACL to associate with the ALB (empty to skip)"
+  type        = string
+  default     = ""
 }
 
 variable "tags" {

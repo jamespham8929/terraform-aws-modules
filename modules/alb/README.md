@@ -14,8 +14,9 @@ Application Load Balancer with HTTPS redirect, WAF association, and target group
 | name | Name of the load balancer and associated resources | `string` | n/a | yes |
 | subnet\_ids | Public subnet IDs to place the ALB in | `list(string)` | n/a | yes |
 | tags | Tags applied to every resource in this module | `map(string)` | `{}` | no |
-| target\_groups | Map of target group configurations | <pre>map(object({<br/>    port              = number<br/>    target_type       = string<br/>    health_check_path = string<br/>  }))</pre> | `{}` | no |
+| target\_groups | Map of target group configurations. The first key in sorted order is the default target. | <pre>map(object({<br/>    port              = number<br/>    target_type       = string<br/>    health_check_path = string<br/>  }))</pre> | n/a | yes |
 | vpc\_id | VPC to create the ALB in | `string` | n/a | yes |
+| waf\_web\_acl\_arn | ARN of a WAFv2 web ACL to associate with the ALB (empty to skip) | `string` | `""` | no |
 
 ## Outputs
 
