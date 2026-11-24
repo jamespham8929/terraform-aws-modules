@@ -7,14 +7,15 @@ EKS cluster with managed node groups, IRSA OIDC provider, and control plane logg
 
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
-| cluster\_addons | Map of EKS add-ons to install (name -> { version }) | <pre>map(object({<br/>    version = string<br/>  }))</pre> | `{}` | no |
+| cluster\_addons | Map of EKS add-ons to install (name -> { version }). Leave version unset to get the default for the cluster's Kubernetes version. | <pre>map(object({<br/>    version = optional(string)<br/>  }))</pre> | `{}` | no |
 | cluster\_name | Name of the EKS cluster | `string` | n/a | yes |
-| endpoint\_public\_access | Allow the Kubernetes API server endpoint to be accessible from the internet | `bool` | `true` | no |
+| endpoint\_public\_access | Allow the Kubernetes API server endpoint to be accessible from the internet. Off by default. If you turn it on, also narrow public\_access\_cidrs. | `bool` | `false` | no |
 | kubernetes\_version | Kubernetes version for the EKS cluster | `string` | `"1.30"` | no |
 | node\_groups | Map of node group configurations | <pre>map(object({<br/>    instance_types = list(string)<br/>    desired_size   = number<br/>    min_size       = number<br/>    max_size       = number<br/>    disk_size      = number<br/>    labels         = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
 | private\_subnet\_ids | Subnet IDs for worker nodes and control plane ENIs | `list(string)` | n/a | yes |
 | public\_access\_cidrs | CIDR blocks that can reach the public API endpoint | `list(string)` | <pre>[<br/>  "0.0.0.0/0"<br/>]</pre> | no |
 | public\_subnet\_ids | Subnet IDs for public-facing load balancers | `list(string)` | `[]` | no |
+| secrets\_kms\_key\_arn | KMS key ARN for envelope encryption of Kubernetes secrets. Null creates a key with rotation on. | `string` | `null` | no |
 | tags | Tags applied to every resource in this module | `map(string)` | `{}` | no |
 
 ## Outputs

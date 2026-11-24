@@ -21,9 +21,9 @@ variable "public_subnet_ids" {
 }
 
 variable "endpoint_public_access" {
-  description = "Allow the Kubernetes API server endpoint to be accessible from the internet"
+  description = "Allow the Kubernetes API server endpoint to be accessible from the internet. Off by default. If you turn it on, also narrow public_access_cidrs."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "public_access_cidrs" {
@@ -46,11 +46,17 @@ variable "node_groups" {
 }
 
 variable "cluster_addons" {
-  description = "Map of EKS add-ons to install (name -> { version })"
+  description = "Map of EKS add-ons to install (name -> { version }). Leave version unset to get the default for the cluster's Kubernetes version."
   type = map(object({
-    version = string
+    version = optional(string)
   }))
   default = {}
+}
+
+variable "secrets_kms_key_arn" {
+  description = "KMS key ARN for envelope encryption of Kubernetes secrets. Null creates a key with rotation on."
+  type        = string
+  default     = null
 }
 
 variable "tags" {

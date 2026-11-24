@@ -13,10 +13,50 @@ terraform {
   }
 }
 
+locals {
+  secrets_key_arn = var.secrets_kms_key_arn != null ? var.secrets_kms_key_arn : aws_kms_key.secrets[0].arn
+}
+
+# Kubernetes stores secrets base64 encoded in etcd. Envelope encryption wraps
+# them with a KMS key, so a leaked etcd backup does not leak the secrets.
+data "aws_caller_identity" "current" {}
+data "aws_partition" "current" {}
+
+resource "aws_kms_key" "secrets" {
+  count = var.secrets_kms_key_arn == null ? 1 : 0
+
+  description             = "Envelope encryption for ${var.cluster_name} Kubernetes secrets"
+  enable_key_rotation     = true
+  deletion_window_in_days = 30
+
+  # The same access the AWS default key policy grants, written out so it is
+  # reviewed here instead of implied. IAM policies in the account decide who
+  # may use the key, and the EKS cluster role uses it through a grant.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "AccountAdministersTheKey"
+      Effect    = "Allow"
+      Principal = { AWS = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:root" }
+      Action    = "kms:*"
+      Resource  = "*"
+    }]
+  })
+
+  tags = var.tags
+}
+
 resource "aws_eks_cluster" "this" {
   name     = var.cluster_name
   role_arn = aws_iam_role.cluster.arn
   version  = var.kubernetes_version
+
+  encryption_config {
+    resources = ["secrets"]
+    provider {
+      key_arn = local.secrets_key_arn
+    }
+  }
 
   vpc_config {
     subnet_ids              = concat(var.private_subnet_ids, var.public_subnet_ids)

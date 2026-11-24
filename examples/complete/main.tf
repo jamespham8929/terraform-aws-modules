@@ -51,11 +51,14 @@ module "eks" {
     }
   }
 
+  # Unset versions install the default build for the cluster's Kubernetes
+  # version. A pinned version must be built for that Kubernetes version, or EKS
+  # rejects it. Pin one only when you need to hold it back.
   cluster_addons = {
-    coredns            = { version = "v1.11.1-eksbuild.4" }
-    kube-proxy         = { version = "v1.30.0-eksbuild.3" }
-    vpc-cni            = { version = "v1.18.1-eksbuild.1" }
-    aws-ebs-csi-driver = { version = "v1.31.0-eksbuild.1" }
+    coredns            = {}
+    kube-proxy         = {}
+    vpc-cni            = {}
+    aws-ebs-csi-driver = {}
   }
 
   tags = {
