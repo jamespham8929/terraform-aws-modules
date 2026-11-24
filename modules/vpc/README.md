@@ -11,6 +11,8 @@ Multi-AZ VPC with public and private subnets, NAT gateways, and VPC flow logs.
 | cidr | VPC CIDR block | `string` | `"10.0.0.0/16"` | no |
 | enable\_flow\_logs | Publish VPC flow logs to CloudWatch Logs | `bool` | `true` | no |
 | enable\_nat\_gateway | Provision NAT gateways so private subnets can reach the internet | `bool` | `true` | no |
+| flow\_log\_kms\_key\_id | KMS key ARN to encrypt the flow log group (null for the default CloudWatch encryption) | `string` | `null` | no |
+| flow\_log\_retention\_days | Days to keep VPC flow logs in CloudWatch Logs | `number` | `30` | no |
 | name | Name prefix applied to all resources | `string` | n/a | yes |
 | private\_subnets | CIDR blocks for private subnets (one per AZ) | `list(string)` | `[]` | no |
 | public\_subnets | CIDR blocks for public subnets (one per AZ) | `list(string)` | `[]` | no |

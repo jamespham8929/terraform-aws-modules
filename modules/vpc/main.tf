@@ -11,6 +11,14 @@ terraform {
 
 locals {
   azs_count = length(var.azs)
+
+  # One NAT gateway per private subnet's AZ, or one shared. Sizing this off the
+  # private subnets means a spare public subnet does not buy an idle NAT.
+  nat_count = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(var.private_subnets)) : 0
+
+  # A private route table per NAT gateway. Without NAT, or with one shared NAT,
+  # every private subnet uses the same table.
+  private_route_table_count = var.enable_nat_gateway && !var.single_nat_gateway ? length(var.private_subnets) : 1
 }
 
 resource "aws_vpc" "this" {
@@ -19,6 +27,15 @@ resource "aws_vpc" "this" {
   enable_dns_support   = true
 
   tags = merge(var.tags, { Name = var.name })
+}
+
+# AWS gives every VPC a default security group that allows traffic between its
+# members. Nothing here uses it, so take its rules away. A resource that lands
+# in it by mistake then gets no access instead of open access.
+resource "aws_default_security_group" "this" {
+  vpc_id = aws_vpc.this.id
+
+  tags = merge(var.tags, { Name = "${var.name}-default-deny" })
 }
 
 resource "aws_internet_gateway" "this" {
@@ -55,14 +72,14 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_eip" "nat" {
-  count  = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(var.public_subnets)) : 0
+  count  = local.nat_count
   domain = "vpc"
 
   tags = merge(var.tags, { Name = "${var.name}-nat-${count.index + 1}" })
 }
 
 resource "aws_nat_gateway" "this" {
-  count = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(var.public_subnets)) : 0
+  count = local.nat_count
 
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
@@ -70,6 +87,13 @@ resource "aws_nat_gateway" "this" {
   depends_on = [aws_internet_gateway.this]
 
   tags = merge(var.tags, { Name = "${var.name}-nat-${count.index + 1}" })
+
+  lifecycle {
+    precondition {
+      condition     = !var.enable_nat_gateway || var.single_nat_gateway || length(var.public_subnets) >= length(var.private_subnets)
+      error_message = "With a NAT gateway per AZ, each private subnet needs a public subnet at the same index to hold its NAT gateway. Add public subnets or set single_nat_gateway = true."
+    }
+  }
 }
 
 resource "aws_route_table" "public" {
@@ -84,18 +108,19 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table" "private" {
-  count  = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(var.private_subnets)) : 1
+  count  = local.private_route_table_count
   vpc_id = aws_vpc.this.id
 
   dynamic "route" {
     for_each = var.enable_nat_gateway ? [1] : []
     content {
       cidr_block     = "0.0.0.0/0"
-      nat_gateway_id = var.single_nat_gateway ? aws_nat_gateway.this[0].id : aws_nat_gateway.this[count.index].id
+      nat_gateway_id = aws_nat_gateway.this[var.single_nat_gateway ? 0 : count.index].id
     }
   }
 
   tags = merge(var.tags, { Name = "${var.name}-private-${count.index + 1}" })
+
 }
 
 resource "aws_route_table_association" "public" {
@@ -107,13 +132,16 @@ resource "aws_route_table_association" "public" {
 resource "aws_route_table_association" "private" {
   count          = length(var.private_subnets)
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = var.single_nat_gateway ? aws_route_table.private[0].id : aws_route_table.private[count.index].id
+  route_table_id = aws_route_table.private[local.private_route_table_count == 1 ? 0 : count.index].id
 }
 
 resource "aws_cloudwatch_log_group" "flow_log" {
+  #checkov:skip=CKV_AWS_158:KMS encryption is opt-in through flow_log_kms_key_id. A key the module creates would be one more thing to own.
+  #checkov:skip=CKV_AWS_338:Retention is a cost choice. Flow logs are large, so the default is 30 days and flow_log_retention_days raises it.
   count             = var.enable_flow_logs ? 1 : 0
   name              = "/aws/vpc/flow-logs/${var.name}"
-  retention_in_days = 30
+  retention_in_days = var.flow_log_retention_days
+  kms_key_id        = var.flow_log_kms_key_id
   tags              = var.tags
 }
 
@@ -137,12 +165,17 @@ resource "aws_iam_role_policy" "flow_log" {
   count = var.enable_flow_logs ? 1 : 0
   name  = "${var.name}-vpc-flow-log"
   role  = aws_iam_role.flow_log[0].id
+  # Scoped to the one log group this module creates. The group already exists,
+  # so the role has no need to create groups.
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogGroups", "logs:DescribeLogStreams"]
-      Resource = "*"
+      Effect = "Allow"
+      Action = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogGroups", "logs:DescribeLogStreams"]
+      Resource = [
+        aws_cloudwatch_log_group.flow_log[0].arn,
+        "${aws_cloudwatch_log_group.flow_log[0].arn}:*",
+      ]
     }]
   })
 }
